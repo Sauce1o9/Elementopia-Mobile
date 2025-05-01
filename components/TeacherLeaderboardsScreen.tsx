@@ -1,70 +1,64 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  Animated,
-  Pressable,
-  Alert,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
-import {
-  useFonts,
-  PressStart2P_400Regular,
-} from "@expo-google-fonts/press-start-2p";
-import { RobotoMono_400Regular } from "@expo-google-fonts/roboto-mono";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useAuth } from "../context/AuthContext";
-import authService from "../services/authService";
+import { useEffect, useState, useRef } from "react"
+import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, Animated, Pressable, Alert } from "react-native"
+import { LinearGradient } from "expo-linear-gradient"
+import { StatusBar } from "expo-status-bar"
+import { useFonts, PressStart2P_400Regular } from "@expo-google-fonts/press-start-2p"
+import { RobotoMono_400Regular } from "@expo-google-fonts/roboto-mono"
+import { Ionicons } from "@expo/vector-icons"
+import { useRouter } from "expo-router"
+import { useAuth } from "../context/AuthContext"
+import authService from "../services/authService"
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get("window")
 
 interface Student {
-  userId: number;
-  firstName: string;
-  lastName: string;
-  careerTotalScore: number;
+  userId: number
+  firstName: string
+  lastName: string
+  careerTotalScore: number
 }
 
-const LeaderboardsScreen = () => {
-  const router = useRouter();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuAnimation = useRef(new Animated.Value(0)).current;
-  const [students, setStudents] = useState<Student[]>([]);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.9));
-  const itemFadeRefs = useRef<Animated.Value[]>([]);
-  const itemSlideRefs = useRef<Animated.Value[]>([]);
-  const { logout } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
+type SortOption = "score" | "name"
+
+const TeacherLeaderboardsScreen = () => {
+  const router = useRouter()
+  const { logout } = useAuth()
+  const [students, setStudents] = useState<Student[]>([])
+  const [allStudents, setAllStudents] = useState<Student[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<SortOption>("score")
+  const [fadeAnim] = useState(new Animated.Value(0))
+  const [scaleAnim] = useState(new Animated.Value(0.9))
+  const itemFadeRefs = useRef<Animated.Value[]>([])
+  const itemSlideRefs = useRef<Animated.Value[]>([])
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuAnimation = useRef(new Animated.Value(0)).current
+  const [isLoading, setIsLoading] = useState(true)
 
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,
     RobotoMono_400Regular,
-  });
+  })
 
   useEffect(() => {
-    const loadLeaderboard = async () => {
+    const loadStudents = async () => {
       try {
-        const data = await authService.getAllStudents();
-        console.log("data", data);
-        const sortedStudents = data
-          .sort((a, b) => b.careerTotalScore - a.careerTotalScore)
-          .slice(0, 10);
-
-        itemFadeRefs.current = sortedStudents.map(() => new Animated.Value(0));
-        itemSlideRefs.current = sortedStudents.map(
-          () => new Animated.Value(50)
-        );
-
-        setStudents(sortedStudents);
-
+        const data = await authService.getAllStudents()
+        console.log("Fetched students data:", data)
+        
+        // Sort students by score initially
+        const sortedStudents = data.sort((a, b) => b.careerTotalScore - a.careerTotalScore)
+        
+        // Initialize animation refs
+        itemFadeRefs.current = sortedStudents.map(() => new Animated.Value(0))
+        itemSlideRefs.current = sortedStudents.map(() => new Animated.Value(50))
+        
+        setAllStudents(sortedStudents)
+        setStudents(sortedStudents)
+        
+        // Start animations
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -77,10 +71,11 @@ const LeaderboardsScreen = () => {
             tension: 40,
             useNativeDriver: true,
           }),
-        ]).start();
-
+        ]).start()
+        
+        // Animate each item with a delay
         sortedStudents.forEach((_, index) => {
-          const delay = index * 100;
+          const delay = index * 100
           setTimeout(() => {
             Animated.parallel([
               Animated.timing(itemFadeRefs.current[index], {
@@ -93,106 +88,83 @@ const LeaderboardsScreen = () => {
                 friction: 8,
                 useNativeDriver: true,
               }),
-            ]).start();
-          }, delay);
-        });
+            ]).start()
+          }, delay)
+        })
       } catch (error) {
-        console.error("Failed to load leaderboard:", error);
-        Alert.alert("Error", "Failed to load leaderboard data");
+        console.error("Failed to load students:", error)
+        Alert.alert("Error", "Failed to load students data")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
+    
+    loadStudents()
+  }, [])
 
-    loadLeaderboard();
-  }, []);
+  const handleSearch = (text: string) => {
+    setSearchQuery(text)
+    const filtered = allStudents.filter(student => 
+      student.lastName.toLowerCase().includes(text.toLowerCase()) ||
+      student.firstName.toLowerCase().includes(text.toLowerCase())
+    )
+    setStudents(filtered)
+  }
+
+  const handleSort = (option: SortOption) => {
+    setSortBy(option)
+    let sorted = [...allStudents]
+    if (searchQuery) {
+      sorted = sorted.filter(student => 
+        student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        student.firstName.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+    sorted.sort((a, b) => {
+      if (option === "name") {
+        return a.lastName.localeCompare(b.lastName)
+      } else {
+        return b.careerTotalScore - a.careerTotalScore
+      }
+    })
+    setStudents(sorted)
+  }
 
   const toggleMenu = () => {
-    const toValue = isMenuOpen ? 0 : 1;
-    setIsMenuOpen(!isMenuOpen);
+    const toValue = isMenuOpen ? 0 : 1
+    setIsMenuOpen(!isMenuOpen)
     Animated.spring(menuAnimation, {
       toValue,
       friction: 6,
       tension: 40,
       useNativeDriver: true,
-    }).start();
-  };
+    }).start()
+  }
 
   const menuTranslateY = menuAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [-100, 0],
-  });
+  })
 
   const menuOpacity = menuAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 1],
-  });
+  })
 
   const handleLogout = async () => {
     try {
-      await logout();
-      router.push("/login");
+      await logout()
+      router.push("/login")
     } catch (error) {
-      console.error("Logout failed:", error);
-      Alert.alert("Logout Error", "Failed to log out. Please try again.");
+      console.error("Logout failed:", error)
+      Alert.alert("Logout Error", "Failed to log out. Please try again.")
     }
-  };
+  }
 
   const handleProfile = () => {
-    router.push("/profile");
-  };
-
-  const renderLeaderboardItem = (student: Student, index: number) => {
-    const isTopThree = index < 3;
-    const itemFade = itemFadeRefs.current[index];
-    const itemSlide = itemSlideRefs.current[index];
-
-    return (
-      <Animated.View
-        key={student.userId.toString()}
-        style={[
-          styles.leaderboardItem,
-          isTopThree && styles.topThreeItem,
-          {
-            opacity: itemFade,
-            transform: [{ translateY: itemSlide }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={
-            isTopThree
-              ? ["rgba(147, 51, 234, 0.9)", "rgba(79, 70, 229, 0.9)"]
-              : ["rgba(50, 50, 80, 0.6)", "rgba(30, 30, 60, 0.6)"]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientBackground}
-        >
-          <View style={styles.rankContainer}>
-            <Text style={[styles.rankText, isTopThree && styles.topThreeRank]}>
-              {index + 1}
-            </Text>
-          </View>
-
-          <View style={styles.nameContainer}>
-            <Text style={[styles.nameText, isTopThree && styles.topThreeName]}>
-              {student.lastName}, {student.firstName}
-            </Text>
-          </View>
-
-          <View style={styles.scoreContainer}>
-            <Text
-              style={[styles.scoreText, isTopThree && styles.topThreeScore]}
-            >
-              {(student.careerTotalScore || 0).toLocaleString()}{" "}
-              {/* Add fallback */}
-            </Text>
-          </View>
-        </LinearGradient>
-      </Animated.View>
-    );
-  };
+    // Navigate to profile page
+    router.push("/profile")
+  }
 
   if (!fontsLoaded || isLoading) {
     return (
@@ -201,20 +173,59 @@ const LeaderboardsScreen = () => {
           colors={["#0F0A1F", "#1A1245"]}
           style={styles.background}
         >
-          <Text style={styles.loadingText}>LOADING LEADERBOARDS...</Text>
+          <Text style={styles.loadingText}>LOADING STUDENTS DATA...</Text>
         </LinearGradient>
       </View>
-    );
+    )
+  }
+
+  const renderLeaderboardItem = (student: Student, index: number) => {
+    const itemFade = itemFadeRefs.current[index]
+    const itemSlide = itemSlideRefs.current[index]
+
+    return (
+      <Animated.View
+        key={student.userId.toString()}
+        style={[
+          styles.leaderboardItem,
+          {
+            opacity: itemFade,
+            transform: [{ translateY: itemSlide }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={["rgba(50, 50, 80, 0.6)", "rgba(30, 30, 60, 0.6)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientBackground}
+        >
+          <View style={styles.rankContainer}>
+            <Text style={styles.rankText}>{index + 1}</Text>
+          </View>
+
+          <View style={styles.nameContainer}>
+            <Text style={styles.nameText}>
+              {student.lastName}, {student.firstName}
+            </Text>
+          </View>
+
+          <View style={styles.scoreContainer}>
+            <Text style={styles.scoreText}>
+              {(student.careerTotalScore || 0).toLocaleString()}
+            </Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+    )
   }
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <LinearGradient colors={["#0F0A1F", "#1A1245"]} style={styles.background}>
-        <LinearGradient
-          colors={["rgba(0, 0, 0, 0.7)", "rgba(20, 20, 40, 0.9)"]}
-          style={styles.overlay}
-        >
+        <LinearGradient colors={["rgba(0, 0, 0, 0.7)", "rgba(20, 20, 40, 0.9)"]} style={styles.overlay}>
+          {/* Profile Button */}
           <View style={styles.menuContainer}>
             <Pressable
               onPress={toggleMenu}
@@ -231,6 +242,7 @@ const LeaderboardsScreen = () => {
               </LinearGradient>
             </Pressable>
 
+            {/* Menu Options */}
             <Animated.View
               style={[
                 styles.menuOptions,
@@ -254,11 +266,7 @@ const LeaderboardsScreen = () => {
                 >
                   <View style={styles.menuItemContent}>
                     <View style={styles.profileIconPlaceholder}>
-                      <Ionicons
-                        name="person-outline"
-                        size={20}
-                        color="#FF00FF"
-                      />
+                      <Ionicons name="person-outline" size={20} color="#FF00FF" />
                     </View>
                     <Text style={styles.menuItemText}>Profile Information</Text>
                   </View>
@@ -274,11 +282,7 @@ const LeaderboardsScreen = () => {
                   ]}
                 >
                   <View style={styles.menuItemContent}>
-                    <Ionicons
-                      name="log-out-outline"
-                      size={20}
-                      color="#FF00FF"
-                    />
+                    <Ionicons name="log-out-outline" size={20} color="#FF00FF" />
                     <Text style={styles.menuItemText}>Logout</Text>
                   </View>
                 </Pressable>
@@ -296,29 +300,48 @@ const LeaderboardsScreen = () => {
             ]}
           >
             <Text style={styles.headerTitle}>ELEMENTOPIA</Text>
-            <Text style={styles.headerSubtitle}>CHAMPIONS</Text>
+            <Text style={styles.headerSubtitle}>TEACHER </Text>
+            <Text style={styles.headerSubtitle}>DASHBOARD</Text>
             <View style={styles.headerDivider} />
           </Animated.View>
 
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.rankHeader]}>
-              RANK
-            </Text>
-            <Text style={[styles.tableHeaderText, styles.nameHeader]}>
-              STUDENT
-            </Text>
-            <Text style={[styles.tableHeaderText, styles.scoreHeader]}>
-              SCORE
-            </Text>
+          {/* Search and Sort Controls */}
+          <View style={styles.controlsContainer}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#FF00FF" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name..."
+                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                value={searchQuery}
+                onChangeText={handleSearch}
+              />
+            </View>
+
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === "score" && styles.activeSortButton]}
+                onPress={() => handleSort("score")}
+              >
+                <Text style={styles.sortButtonText}>Score</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === "name" && styles.activeSortButton]}
+                onPress={() => handleSort("name")}
+              >
+                <Text style={styles.sortButtonText}>Name</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-          >
-            {students.map((student, index) =>
-              renderLeaderboardItem(student, index)
-            )}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderText, styles.rankHeader]}>RANK</Text>
+            <Text style={[styles.tableHeaderText, styles.nameHeader]}>STUDENT</Text>
+            <Text style={[styles.tableHeaderText, styles.scoreHeader]}>SCORE</Text>
+          </View>
+
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {students.map((student, index) => renderLeaderboardItem(student, index))}
           </ScrollView>
 
           <View style={styles.footerContainer}>
@@ -334,8 +357,8 @@ const LeaderboardsScreen = () => {
         </LinearGradient>
       </LinearGradient>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -387,6 +410,59 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  loadingText: {
+    fontFamily: "PressStart2P_400Regular",
+    fontSize: 16,
+    color: "#00FFF0",
+    textAlign: "center",
+    marginTop: 200,
+    textShadowColor: "rgba(0, 255, 240, 0.8)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  controlsContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#FFFFFF",
+    fontFamily: "RobotoMono_400Regular",
+    fontSize: 14,
+    paddingVertical: 8,
+  },
+  sortContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  sortButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    alignItems: "center",
+  },
+  activeSortButton: {
+    backgroundColor: "rgba(147, 51, 234, 0.3)",
+  },
+  sortButtonText: {
+    color: "#FFFFFF",
+    fontFamily: "RobotoMono_400Regular",
+    fontSize: 14,
+  },
   tableHeader: {
     flexDirection: "row",
     paddingHorizontal: 20,
@@ -426,12 +502,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
   },
-  topThreeItem: {
-    elevation: 5,
-    shadowColor: "#FF00FF",
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-  },
   gradientBackground: {
     flexDirection: "row",
     padding: 15,
@@ -450,13 +520,6 @@ const styles = StyleSheet.create({
     fontFamily: "RobotoMono_400Regular",
     color: "#fff",
   },
-  topThreeName: {
-    fontSize: 16,
-    color: "#fff",
-    textShadowColor: "rgba(255, 255, 255, 0.5)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 3,
-  },
   scoreContainer: {
     width: "25%",
     alignItems: "flex-end",
@@ -465,13 +528,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "RobotoMono_400Regular",
     color: "#00FFF0",
-  },
-  topThreeScore: {
-    fontSize: 16,
-    color: "#FFD700",
-    textShadowColor: "#FFD700",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 5,
   },
   footerContainer: {
     alignItems: "center",
@@ -498,13 +554,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "PressStart2P_400Regular",
     color: "#fff",
-  },
-  topThreeRank: {
-    fontSize: 22,
-    color: "#FFD700",
-    textShadowColor: "#FFD700",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 5,
   },
   menuContainer: {
     position: "absolute",
@@ -588,13 +637,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(147, 51, 234, 0.3)",
     marginVertical: 8,
   },
-  loadingText: {
-    color: "#00FFF0",
-    fontSize: 16,
-    fontFamily: "PressStart2P_400Regular",
-    textAlign: "center",
-    marginTop: 50,
-  },
-});
+})
 
-export default LeaderboardsScreen;
+export default TeacherLeaderboardsScreen

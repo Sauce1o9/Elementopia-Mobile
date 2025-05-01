@@ -48,27 +48,55 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Validation Error", "Please fill in all fields");
+      Alert.alert(
+        "⚠️ AUTHENTICATION ERROR ⚠️",
+        "Access to Elementopia requires both username and password credentials. Please provide your magical keys to enter this realm.",
+        [{ text: "TRY AGAIN", style: "default" }]
+      );
       return;
     }
 
     setIsLoading(true);
-    try {
-      const credentials = { username: email, password };
-      const data = await authService.login(credentials);
-      console.log("data: ", data);
-      if (!data.token) {
-        throw new Error("No authentication token received");
-      }
 
-      await login(data.token);
-      router.push("/leaderboards");
+    try {
+      const response = await authService.login({ username: email, password });
+      await login(response.token);
+      
+      // Get current user to determine role
+      const currentUser = await authService.getCurrentUser();
+      
+      // Redirect based on role
+      if (currentUser.role === "TEACHER") {
+        router.push("/teacher-leaderboards");
+      } else {
+        // Default to student leaderboards for all other roles
+        router.push("/leaderboards");
+      }
     } catch (error: any) {
-      console.error("Login error:", error);
-      Alert.alert(
-        "Login Failed",
-        error.message || "An error occurred during login"
-      );
+      console.error("Login error details:", error);
+      
+      // Handle 401 Unauthorized errors (wrong username/password)
+      if (error.response?.status === 401 || 
+          (error.message && error.message.includes("401")) ||
+          (error.toString().includes("401"))) {
+        Alert.alert(
+          "🔮 AUTHENTICATION FAILED 🔮",
+          "The magical gatekeepers of Elementopia do not recognize these credentials. Your username or password is incorrect.",
+          [{ text: "TRY AGAIN", style: "default" }]
+        );
+      } else if (error.message) {
+        Alert.alert(
+          "⚡ CONNECTION DISRUPTED ⚡",
+          `A mysterious force is preventing your entry: ${error.message}`,
+          [{ text: "RETRY", style: "default" }]
+        );
+      } else {
+        Alert.alert(
+          "🌀 PORTAL MALFUNCTION 🌀",
+          "The gateway to Elementopia is experiencing magical interference. Please try again when the cosmic energies realign.",
+          [{ text: "CLOSE PORTAL", style: "default" }]
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +132,7 @@ export default function LoginScreen() {
 
             <View style={styles.formContainer}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>EMAIL</Text>
+                <Text style={styles.inputLabel}>USERNAME</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons
                     name="mail-outline"
@@ -114,7 +142,7 @@ export default function LoginScreen() {
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="your@email.com"
+                    placeholder="username"
                     placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     value={email}
                     onChangeText={setEmail}

@@ -61,7 +61,7 @@ export default function WelcomeScreen() {
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                onPress={() => router.push("/getstarted")}
+                onPress={() => router.push("/login")}
                 style={styles.buttonWrapper}
               >
                 <LinearGradient

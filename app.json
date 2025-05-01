@@ -4,7 +4,7 @@
     "slug": "Elementopia",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Elementopia-Logo.png",
     "scheme": "elementopia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,24 +14,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.citu.elementopia",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "data": [
-            {
-              "scheme": "elementopia",
-              "host": "*"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ],
-      "usesCleartextTraffic": true,
-      "softwareKeyboardLayoutMode": "pan"
+        "foregroundImage": "./assets/images/Elementopia-Logo.png",
+        "backgroundColor": "#0F0A1F"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -43,10 +28,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/Elementopia-Logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#000000"
         }
       ],
       "expo-font",

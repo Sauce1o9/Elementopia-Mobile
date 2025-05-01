@@ -90,15 +90,16 @@ export default function SignupScreen() {
       // Call registration service
       const newUser = await authService.register(userData);
 
-      // Optional: Auto-login after registration
-      const loginResponse = await authService.login({
-        username,
-        password,
-      });
-      await login(loginResponse.token);
-
-      // Navigate to app
-      router.push("/leaderboards");
+      // Direct redirect to login screen without alert
+      router.push("/login");
+      
+      // Remove auto-login after registration
+      // const loginResponse = await authService.login({
+      //   username,
+      //   password,
+      // });
+      // await login(loginResponse.token);
+      // router.push("/leaderboards");
     } catch (error: any) {
       Alert.alert("Registration Failed", error.message);
     } finally {

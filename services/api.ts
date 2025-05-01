@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Alert } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = "https://elementopia.onrender.com/api"; // Changed to backend port
 const TOKEN_KEY = "jwt";
@@ -13,17 +14,38 @@ const api = axios.create({
   },
 });
 
-api.interceptors.request.use(async (config) => {
-  try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Updated interceptor to check both storage methods
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      // Try AsyncStorage first
+      let token = await AsyncStorage.getItem('authToken');
+      
+      // If not found, try SecureStore as fallback
+      if (!token) {
+        token = await SecureStore.getItemAsync(TOKEN_KEY);
+      }
+      
+      if (token) {
+        // Log token for debugging (remove in production)
+        console.log("Using token:", token.substring(0, 10) + "...");
+        
+        // Make sure Authorization header is properly formatted
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.log("No auth token found");
+      }
+      
+      return config;
+    } catch (error) {
+      console.error("Error retrieving token:", error);
+      return config;
     }
-  } catch (error) {
-    console.error("Token retrieval error:", error);
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 api.interceptors.response.use(
   (response) => response,
@@ -37,6 +59,9 @@ api.interceptors.response.use(
       );
     } else if (error.response?.status === 401) {
       Alert.alert("Session Expired", "Please log in again");
+    } else if (error.response?.status === 403) {
+      console.error("403 Forbidden Error. Headers:", error.config?.headers);
+      console.error("Response data:", error.response?.data);
     }
 
     return Promise.reject(error);

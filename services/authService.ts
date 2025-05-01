@@ -1,4 +1,9 @@
 import api from "./api";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from "expo-secure-store";
+
+// Constants
+const TOKEN_KEY = "jwt";
 
 export interface LoginRequest {
   username: string;
@@ -65,6 +70,7 @@ const getCurrentUser = async (): Promise<UserDTO> => {
 };
 
 // Update login function to match
+// In your login function
 const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
   try {
     const response = await api.post("/user/login", credentials);
@@ -73,6 +79,15 @@ const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
       throw new Error("Authentication token missing in response");
     }
 
+    // Store token in both places to ensure it's available
+    const token = response.data.token;
+    await AsyncStorage.setItem('authToken', token);
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    
+    // Set the token in axios defaults for immediate use
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    console.log("Token stored successfully");
     return response.data;
   } catch (error: any) {
     let message = "Login failed";
@@ -89,10 +104,54 @@ const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
   }
 };
 
-// Export all methods explicitly
-export default {
+export interface UserProfileData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  username: string;
+  password?: string;
+}
+
+// Fix getUserProfile to use the correct endpoint
+const getUserProfile = async (): Promise<UserProfileData> => {
+  try {
+    // The endpoint should match exactly what the backend expects
+    const response = await api.get('/user/current-user');
+    
+    // If the response structure is different, transform it to match UserProfileData
+    const userData = response.data;
+    return {
+      firstName: userData.firstName || '',
+      lastName: userData.lastName || '',
+      email: userData.email || '',
+      username: userData.username || '',
+      password: ''
+    };
+  } catch (error: any) {
+    console.error("Profile fetch error details:", error?.response?.data);
+    throw error;
+  }
+};
+
+// Fix updateUserProfile to use the correct endpoint
+const updateUserProfile = async (userData: UserProfileData): Promise<UserProfileData> => {
+  try {
+    // The endpoint should match exactly what the backend expects
+    const response = await api.put('/user/update-profile', userData);
+    return response.data;
+  } catch (error: any) {
+    console.error("Profile update error details:", error?.response?.data);
+    throw error;
+  }
+};
+
+const authService = {
   register,
   login,
   getCurrentUser,
   getAllStudents,
+  getUserProfile,
+  updateUserProfile,
 };
+
+export default authService;
