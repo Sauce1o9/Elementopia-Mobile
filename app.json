@@ -4,10 +4,15 @@
     "slug": "Elementopia",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/Elementopia-Logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "elementopia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.citu.elementopia"
@@ -16,7 +21,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/Elementopia-Logo.png",
         "backgroundColor": "#0F0A1F"
-      }
+      },
+      "package": "com.citu.elementopia"
     },
     "web": {
       "bundler": "metro",
@@ -28,9 +34,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/Elementopia-Logo.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
+          "image": "./assets/images/icon.png",
+          "resizeMode": "cover",
           "backgroundColor": "#000000"
         }
       ],
@@ -42,7 +47,13 @@
     },
     "extra": {
       "API_URL": "http://192.168.1.4:8080/api",
-      "WEB_URL": "https://elementopia.netlify.app"
+      "WEB_URL": "https://elementopia.netlify.app",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "06c37f4c-559a-47a1-83f1-66146a8140ad"
+      }
     }
   }
 }
