@@ -1,54 +1,110 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, TouchableWithoutFeedback, Keyboard } from "react-native"
-import { StatusBar } from "expo-status-bar"
-import { useFonts, PressStart2P_400Regular } from "@expo-google-fonts/press-start-2p"
-import { RobotoMono_400Regular } from "@expo-google-fonts/roboto-mono"
-import { LinearGradient } from "expo-linear-gradient"
-import { Image } from "expo-image"
-import { TextInput } from "react-native-gesture-handler"
-import { Ionicons } from "@expo/vector-icons"
-import { useRouter } from "expo-router"
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view"
+import { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Alert,
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import {
+  useFonts,
+  PressStart2P_400Regular,
+} from "@expo-google-fonts/press-start-2p";
+import { RobotoMono_400Regular } from "@expo-google-fonts/roboto-mono";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
+import { TextInput } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { useAuth } from "../context/AuthContext";
+import authService from "../services/authService";
 
-const { width, height } = Dimensions.get("window")
+const { width, height } = Dimensions.get("window");
 
 // Logo image
-const LOGO_IMAGE = require("../assets/images/Elementopia-Logo.jpg")
+const LOGO_IMAGE = require("../assets/images/Elementopia-Logo.jpg");
 
 export default function SignupScreen() {
-  const router = useRouter()
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [role, setRole] = useState("Student")
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const { login } = useAuth();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("Student");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,
     RobotoMono_400Regular,
-  })
+  });
 
   if (!fontsLoaded) {
-    return null
+    return null;
   }
 
   const handleSignup = async () => {
-    setIsLoading(true)
-    // Implement your signup logic here
-    setTimeout(() => {
-      setIsLoading(false)
-      // Navigate to main app after successful signup
-      router.push("/explore")
-    }, 1500)
-  }
+    // Basic validation
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !username ||
+      !password ||
+      !confirmPassword
+    ) {
+      Alert.alert("Error", "All fields are required");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Prepare user data for registration
+      const userData = {
+        firstName,
+        lastName,
+        email,
+        username,
+        password,
+        role: role.toUpperCase(), // Convert to match backend expectations
+      };
+
+      // Call registration service
+      const newUser = await authService.register(userData);
+
+      // Optional: Auto-login after registration
+      const loginResponse = await authService.login({
+        username,
+        password,
+      });
+      await login(loginResponse.token);
+
+      // Navigate to app
+      router.push("/leaderboards");
+    } catch (error: any) {
+      Alert.alert("Registration Failed", error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -67,7 +123,12 @@ export default function SignupScreen() {
 
             {/* Logo */}
             <View style={styles.logoContainer}>
-              <Image source={LOGO_IMAGE} style={styles.logoImage} contentFit="cover" transition={1000} />
+              <Image
+                source={LOGO_IMAGE}
+                style={styles.logoImage}
+                contentFit="cover"
+                transition={1000}
+              />
               <LinearGradient
                 colors={["rgba(147, 51, 234, 0.6)", "rgba(79, 70, 229, 0.6)"]}
                 style={styles.logoGlow}
@@ -83,7 +144,12 @@ export default function SignupScreen() {
                 <View style={[styles.inputContainer, styles.halfWidth]}>
                   <Text style={styles.inputLabel}>FIRST NAME</Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="person-outline" size={20} color="#9333EA" style={styles.inputIcon} />
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color="#9333EA"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
                       placeholder="First name"
@@ -99,7 +165,12 @@ export default function SignupScreen() {
                 <View style={[styles.inputContainer, styles.halfWidth]}>
                   <Text style={styles.inputLabel}>LAST NAME</Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="person-outline" size={20} color="#9333EA" style={styles.inputIcon} />
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color="#9333EA"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
                       placeholder="Last name"
@@ -116,7 +187,12 @@ export default function SignupScreen() {
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>EMAIL</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="mail-outline" size={20} color="#9333EA" style={styles.inputIcon} />
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color="#9333EA"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="your@email.com"
@@ -133,7 +209,12 @@ export default function SignupScreen() {
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>USERNAME</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="at-outline" size={20} color="#9333EA" style={styles.inputIcon} />
+                  <Ionicons
+                    name="at-outline"
+                    size={20}
+                    color="#9333EA"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Choose a username"
@@ -149,7 +230,12 @@ export default function SignupScreen() {
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>PASSWORD</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#9333EA" style={styles.inputIcon} />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#9333EA"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="••••••••"
@@ -159,8 +245,15 @@ export default function SignupScreen() {
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                   />
-                  <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9333EA" />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#9333EA"
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -169,7 +262,12 @@ export default function SignupScreen() {
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#9333EA" style={styles.inputIcon} />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#9333EA"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="••••••••"
@@ -179,9 +277,14 @@ export default function SignupScreen() {
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
                   />
-                  <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
                     <Ionicons
-                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
                       size={20}
                       color="#9333EA"
                     />
@@ -196,8 +299,15 @@ export default function SignupScreen() {
                   style={styles.inputWrapper}
                   onPress={() => setShowRoleDropdown(!showRoleDropdown)}
                 >
-                  <Ionicons name="school-outline" size={20} color="#9333EA" style={styles.inputIcon} />
-                  <Text style={[styles.input, { paddingVertical: 12 }]}>{role}</Text>
+                  <Ionicons
+                    name="school-outline"
+                    size={20}
+                    color="#9333EA"
+                    style={styles.inputIcon}
+                  />
+                  <Text style={[styles.input, { paddingVertical: 12 }]}>
+                    {role}
+                  </Text>
                   <Ionicons
                     name={showRoleDropdown ? "chevron-up" : "chevron-down"}
                     size={20}
@@ -210,22 +320,32 @@ export default function SignupScreen() {
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
-                        setRole("Student")
-                        setShowRoleDropdown(false)
+                        setRole("Student");
+                        setShowRoleDropdown(false);
                       }}
                     >
-                      <Text style={[styles.dropdownText, role === "Student" && styles.dropdownTextSelected]}>
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          role === "Student" && styles.dropdownTextSelected,
+                        ]}
+                      >
                         Student
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       onPress={() => {
-                        setRole("Teacher")
-                        setShowRoleDropdown(false)
+                        setRole("Teacher");
+                        setShowRoleDropdown(false);
                       }}
                     >
-                      <Text style={[styles.dropdownText, role === "Teacher" && styles.dropdownTextSelected]}>
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          role === "Teacher" && styles.dropdownTextSelected,
+                        ]}
+                      >
                         Teacher
                       </Text>
                     </TouchableOpacity>
@@ -234,7 +354,11 @@ export default function SignupScreen() {
               </View>
 
               {/* Signup Button */}
-              <TouchableOpacity onPress={handleSignup} style={styles.buttonWrapper} disabled={isLoading}>
+              <TouchableOpacity
+                onPress={handleSignup}
+                style={styles.buttonWrapper}
+                disabled={isLoading}
+              >
                 <LinearGradient
                   colors={["#4F46E5", "#7C3AED", "#9333EA"]}
                   start={{ x: 0, y: 0 }}
@@ -242,9 +366,16 @@ export default function SignupScreen() {
                   style={styles.signupButton}
                 >
                   <View style={styles.buttonContent}>
-                    <Text style={styles.signupButtonText}>{isLoading ? "SIGNING UP..." : "SIGN UP"}</Text>
+                    <Text style={styles.signupButtonText}>
+                      {isLoading ? "SIGNING UP..." : "SIGN UP"}
+                    </Text>
                     {!isLoading && (
-                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                      <Ionicons
+                        name="arrow-forward"
+                        size={20}
+                        color="#FFFFFF"
+                        style={styles.buttonIcon}
+                      />
                     )}
                   </View>
                   <View style={styles.buttonGlow} />
@@ -269,7 +400,7 @@ export default function SignupScreen() {
       <View style={styles.backgroundElement2} />
       <View style={styles.backgroundElement3} />
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -523,4 +654,4 @@ const styles = StyleSheet.create({
   dropdownTextSelected: {
     color: "#9333EA",
   },
-}) 
+});

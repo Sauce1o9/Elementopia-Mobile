@@ -1,147 +1,155 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useRef } from "react"
-import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, Animated, Pressable } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { StatusBar } from "expo-status-bar"
-import { useFonts, PressStart2P_400Regular } from "@expo-google-fonts/press-start-2p"
-import { RobotoMono_400Regular } from "@expo-google-fonts/roboto-mono"
-import { Ionicons } from "@expo/vector-icons"
-import { useRouter } from "expo-router"
+import { useEffect, useState, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Animated,
+  Pressable,
+  Alert,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import {
+  useFonts,
+  PressStart2P_400Regular,
+} from "@expo-google-fonts/press-start-2p";
+import { RobotoMono_400Regular } from "@expo-google-fonts/roboto-mono";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
+import authService from "../services/authService";
 
-// Mock data for demonstration
-const ALL_STUDENTS = [
-  { id: "1", lname: "Smith", fname: "Emma", careerTotalScore: 12850 },
-  { id: "2", lname: "Johnson", fname: "Liam", careerTotalScore: 12720 },
-  { id: "3", lname: "Williams", fname: "Olivia", careerTotalScore: 12540 },
-  { id: "4", lname: "Brown", fname: "Noah", careerTotalScore: 12350 },
-  { id: "5", lname: "Jones", fname: "Ava", careerTotalScore: 12210 },
-  { id: "6", lname: "Garcia", fname: "Isabella", careerTotalScore: 11970 },
-  { id: "7", lname: "Miller", fname: "Sophia", careerTotalScore: 11840 },
-  { id: "8", lname: "Davis", fname: "Mason", careerTotalScore: 11730 },
-  { id: "9", lname: "Rodriguez", fname: "Lucas", careerTotalScore: 11620 },
-  { id: "10", lname: "Martinez", fname: "Ethan", careerTotalScore: 11510 },
-  { id: "11", lname: "Hernandez", fname: "Oliver", careerTotalScore: 11400 },
-  { id: "12", lname: "Lopez", fname: "Aiden", careerTotalScore: 11300 },
-  { id: "13", lname: "Gonzalez", fname: "Elijah", careerTotalScore: 11200 },
-  { id: "14", lname: "Wilson", fname: "James", careerTotalScore: 11100 },
-  { id: "15", lname: "Anderson", fname: "Benjamin", careerTotalScore: 11000 },
-]
-
-const { width } = Dimensions.get("window")
+const { width } = Dimensions.get("window");
 
 interface Student {
-  id: string
-  lname: string
-  fname: string
-  careerTotalScore: number
+  userId: number;
+  firstName: string;
+  lastName: string;
+  careerTotalScore: number;
 }
 
 const LeaderboardsScreen = () => {
-  const router = useRouter()
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const menuAnimation = useRef(new Animated.Value(0)).current
-  const [students, setStudents] = useState<Student[]>([])
-  const [fadeAnim] = useState(new Animated.Value(0))
-  const [scaleAnim] = useState(new Animated.Value(0.9))
-  const itemFadeRefs = useRef<Animated.Value[]>([])
-  const itemSlideRefs = useRef<Animated.Value[]>([])
+  const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuAnimation = useRef(new Animated.Value(0)).current;
+  const [students, setStudents] = useState<Student[]>([]);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.9));
+  const itemFadeRefs = useRef<Animated.Value[]>([]);
+  const itemSlideRefs = useRef<Animated.Value[]>([]);
+  const { logout } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
 
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,
     RobotoMono_400Regular,
-  })
+  });
 
   useEffect(() => {
-    // Sort students by career total score and get top 10
-    const topTenStudents = [...ALL_STUDENTS]
-      .sort((a, b) => b.careerTotalScore - a.careerTotalScore)
-      .slice(0, 10)
+    const loadLeaderboard = async () => {
+      try {
+        const data = await authService.getAllStudents();
+        console.log("data", data);
+        const sortedStudents = data
+          .sort((a, b) => b.careerTotalScore - a.careerTotalScore)
+          .slice(0, 10);
 
-    // Initialize animation refs for exactly 10 items
-    itemFadeRefs.current = topTenStudents.map(() => new Animated.Value(0))
-    itemSlideRefs.current = topTenStudents.map(() => new Animated.Value(50))
+        itemFadeRefs.current = sortedStudents.map(() => new Animated.Value(0));
+        itemSlideRefs.current = sortedStudents.map(
+          () => new Animated.Value(50)
+        );
 
-    setStudents(topTenStudents)
+        setStudents(sortedStudents);
 
-    // Start animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start()
-
-    // Animate each item with a delay
-    topTenStudents.forEach((_, index) => {
-      const delay = index * 100
-      setTimeout(() => {
         Animated.parallel([
-          Animated.timing(itemFadeRefs.current[index], {
+          Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 500,
+            duration: 1000,
             useNativeDriver: true,
           }),
-          Animated.spring(itemSlideRefs.current[index], {
-            toValue: 0,
+          Animated.spring(scaleAnim, {
+            toValue: 1,
             friction: 8,
+            tension: 40,
             useNativeDriver: true,
           }),
-        ]).start()
-      }, delay)
-    })
-  }, [])
+        ]).start();
+
+        sortedStudents.forEach((_, index) => {
+          const delay = index * 100;
+          setTimeout(() => {
+            Animated.parallel([
+              Animated.timing(itemFadeRefs.current[index], {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+              }),
+              Animated.spring(itemSlideRefs.current[index], {
+                toValue: 0,
+                friction: 8,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          }, delay);
+        });
+      } catch (error) {
+        console.error("Failed to load leaderboard:", error);
+        Alert.alert("Error", "Failed to load leaderboard data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadLeaderboard();
+  }, []);
 
   const toggleMenu = () => {
-    const toValue = isMenuOpen ? 0 : 1
-    setIsMenuOpen(!isMenuOpen)
+    const toValue = isMenuOpen ? 0 : 1;
+    setIsMenuOpen(!isMenuOpen);
     Animated.spring(menuAnimation, {
       toValue,
       friction: 6,
       tension: 40,
       useNativeDriver: true,
-    }).start()
-  }
+    }).start();
+  };
 
   const menuTranslateY = menuAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [-100, 0],
-  })
+  });
 
   const menuOpacity = menuAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 1],
-  })
+  });
 
-  const handleLogout = () => {
-    // Implement logout logic here
-    router.push("/login")
-  }
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      Alert.alert("Logout Error", "Failed to log out. Please try again.");
+    }
+  };
 
   const handleProfile = () => {
-    // Navigate to profile page
-    //router.push("/profile")
-  }
-
-  if (!fontsLoaded) {
-    return null
-  }
+    // router.push("/profile")
+  };
 
   const renderLeaderboardItem = (student: Student, index: number) => {
-    const isTopThree = index < 3
-    const itemFade = itemFadeRefs.current[index]
-    const itemSlide = itemSlideRefs.current[index]
+    const isTopThree = index < 3;
+    const itemFade = itemFadeRefs.current[index];
+    const itemSlide = itemSlideRefs.current[index];
 
     return (
       <Animated.View
-        key={student.id}
+        key={student.userId.toString()}
         style={[
           styles.leaderboardItem,
           isTopThree && styles.topThreeItem,
@@ -152,39 +160,61 @@ const LeaderboardsScreen = () => {
         ]}
       >
         <LinearGradient
-          colors={isTopThree 
-            ? ["rgba(147, 51, 234, 0.9)", "rgba(79, 70, 229, 0.9)"] 
-            : ["rgba(50, 50, 80, 0.6)", "rgba(30, 30, 60, 0.6)"]}
+          colors={
+            isTopThree
+              ? ["rgba(147, 51, 234, 0.9)", "rgba(79, 70, 229, 0.9)"]
+              : ["rgba(50, 50, 80, 0.6)", "rgba(30, 30, 60, 0.6)"]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.gradientBackground}
         >
           <View style={styles.rankContainer}>
-            <Text style={[styles.rankText, isTopThree && styles.topThreeRank]}>{index + 1}</Text>
+            <Text style={[styles.rankText, isTopThree && styles.topThreeRank]}>
+              {index + 1}
+            </Text>
           </View>
 
           <View style={styles.nameContainer}>
             <Text style={[styles.nameText, isTopThree && styles.topThreeName]}>
-              {student.lname}, {student.fname}
+              {student.lastName}, {student.firstName}
             </Text>
           </View>
 
           <View style={styles.scoreContainer}>
-            <Text style={[styles.scoreText, isTopThree && styles.topThreeScore]}>
-              {student.careerTotalScore.toLocaleString()}
+            <Text
+              style={[styles.scoreText, isTopThree && styles.topThreeScore]}
+            >
+              {(student.careerTotalScore || 0).toLocaleString()}{" "}
+              {/* Add fallback */}
             </Text>
           </View>
         </LinearGradient>
       </Animated.View>
-    )
+    );
+  };
+
+  if (!fontsLoaded || isLoading) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={["#0F0A1F", "#1A1245"]}
+          style={styles.background}
+        >
+          <Text style={styles.loadingText}>LOADING LEADERBOARDS...</Text>
+        </LinearGradient>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <LinearGradient colors={["#0F0A1F", "#1A1245"]} style={styles.background}>
-        <LinearGradient colors={["rgba(0, 0, 0, 0.7)", "rgba(20, 20, 40, 0.9)"]} style={styles.overlay}>
-          {/* Profile Button */}
+        <LinearGradient
+          colors={["rgba(0, 0, 0, 0.7)", "rgba(20, 20, 40, 0.9)"]}
+          style={styles.overlay}
+        >
           <View style={styles.menuContainer}>
             <Pressable
               onPress={toggleMenu}
@@ -201,7 +231,6 @@ const LeaderboardsScreen = () => {
               </LinearGradient>
             </Pressable>
 
-            {/* Menu Options */}
             <Animated.View
               style={[
                 styles.menuOptions,
@@ -225,7 +254,11 @@ const LeaderboardsScreen = () => {
                 >
                   <View style={styles.menuItemContent}>
                     <View style={styles.profileIconPlaceholder}>
-                      <Ionicons name="person-outline" size={20} color="#FF00FF" />
+                      <Ionicons
+                        name="person-outline"
+                        size={20}
+                        color="#FF00FF"
+                      />
                     </View>
                     <Text style={styles.menuItemText}>Profile Information</Text>
                   </View>
@@ -241,7 +274,11 @@ const LeaderboardsScreen = () => {
                   ]}
                 >
                   <View style={styles.menuItemContent}>
-                    <Ionicons name="log-out-outline" size={20} color="#FF00FF" />
+                    <Ionicons
+                      name="log-out-outline"
+                      size={20}
+                      color="#FF00FF"
+                    />
                     <Text style={styles.menuItemText}>Logout</Text>
                   </View>
                 </Pressable>
@@ -264,13 +301,24 @@ const LeaderboardsScreen = () => {
           </Animated.View>
 
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.rankHeader]}>RANK</Text>
-            <Text style={[styles.tableHeaderText, styles.nameHeader]}>STUDENT</Text>
-            <Text style={[styles.tableHeaderText, styles.scoreHeader]}>SCORE</Text>
+            <Text style={[styles.tableHeaderText, styles.rankHeader]}>
+              RANK
+            </Text>
+            <Text style={[styles.tableHeaderText, styles.nameHeader]}>
+              STUDENT
+            </Text>
+            <Text style={[styles.tableHeaderText, styles.scoreHeader]}>
+              SCORE
+            </Text>
           </View>
 
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {students.map((student, index) => renderLeaderboardItem(student, index))}
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+          >
+            {students.map((student, index) =>
+              renderLeaderboardItem(student, index)
+            )}
           </ScrollView>
 
           <View style={styles.footerContainer}>
@@ -286,8 +334,8 @@ const LeaderboardsScreen = () => {
         </LinearGradient>
       </LinearGradient>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -540,6 +588,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(147, 51, 234, 0.3)",
     marginVertical: 8,
   },
-})
+  loadingText: {
+    color: "#00FFF0",
+    fontSize: 16,
+    fontFamily: "PressStart2P_400Regular",
+    textAlign: "center",
+    marginTop: 50,
+  },
+});
 
-export default LeaderboardsScreen 
+export default LeaderboardsScreen;
